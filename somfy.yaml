@@ -1,0 +1,89 @@
+esphome:
+  name: somfy
+  friendly_name: Somfy
+  libraries:
+    - EEPROM
+    - SPI
+    - https://github.com/LSatan/SmartRC-CC1101-Driver-Lib/releases/download/v2.5.6/SmartRC-CC1101-Driver-Lib-master-v2.5.6.zip
+    - Somfy_Remote_Lib@0.4.1
+  includes:
+    - somfy_secrets.h
+    - somfy_cover.h
+    
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Somfy Fallback Hotspot"
+    password: !secret ap_password
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  password: !secret ota_password
+
+cover:
+  - platform: custom
+    lambda: |-
+      auto somfy_remote = new SomfyESPRemote();
+      somfy_remote->add_cover("somfy", "guest_room", SOMFY_REMOTE_GUEST);
+      somfy_remote->add_cover("somfy", "master_room", SOMFY_REMOTE_MASTER);
+      somfy_remote->add_cover("somfy", "all_room", SOMFY_REMOTE_ALL);
+      App.register_component(somfy_remote);
+      return somfy_remote->covers;
+
+    covers:
+      - id: "somfy"
+        name: "Guest Bedroom Blinds"
+      - id: "somfy2"
+        name: "Master Bedroom Blinds"
+      - id: "somfy3"
+        name: "All Bedroom Blinds"
+
+switch:
+  - platform: template
+    name: "PROG GUEST"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy))->program();
+  - platform: template
+    name: "STOP GUEST"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy))->make_call().set_command_stop().perform();
+  - platform: template
+    name: "PROG MASTER"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy2))->program();
+  - platform: template
+    name: "STOP MASTER"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy2))->make_call().set_command_stop().perform();
+
+  - platform: template
+    name: "PROG ALL"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy3))->program();
+  - platform: template
+    name: "STOP ALL"
+    turn_on_action:
+      - lambda: |-
+          ((SomfyESPCover*)id(somfy3))->make_call().set_command_stop().perform();
